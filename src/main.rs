@@ -1,8 +1,18 @@
 use std::collections::HashSet;
 use std::io::{self, BufRead};
 
+use structopt::StructOpt;
+use rand::seq::SliceRandom;
+
 struct Sudoku {
     items: [[u32; 9]; 9]
+}
+
+#[derive(StructOpt)]
+struct Options {
+    #[structopt(short = "r", long = "randomize")]
+    /// Randomize the tree traversal order such that in case of multiple solutions returns a random one
+    randomize: bool
 }
 
 impl std::fmt::Display for Sudoku {
@@ -94,7 +104,6 @@ fn check_solution(sudoku: &Sudoku) -> bool {
 }
 
 fn find_empty_position(sudoku: &Sudoku) -> Option<(usize, usize)> {
-    // This could be randomized to not choose the first location to get less deterministic sudokus
     for (i, row) in sudoku.items.iter().enumerate() {
         for (j, _) in row.iter().enumerate() {
             if sudoku.items[i][j] == 0 {
@@ -105,18 +114,24 @@ fn find_empty_position(sudoku: &Sudoku) -> Option<(usize, usize)> {
     return None
 }
 
-fn dfs(sudoku: &Sudoku) -> Option<Sudoku> {
-    let (start_i, start_j) = match find_empty_position(sudoku) {
+fn dfs(sudoku: Sudoku, randomize: bool) -> Option<Sudoku> {
+    let (start_i, start_j) = match find_empty_position(&sudoku) {
         Some(x) => x,
         None => return Some(Sudoku { items: sudoku.items.clone() })
     };
+    
+    let mut guesses: Vec<u32> = (1..10).collect();
 
-    for guess in 1..10 {
+    if randomize {
+        guesses.shuffle(&mut rand::thread_rng());
+    }
+
+    for guess in guesses.iter() {
         let mut new_items = sudoku.items.clone();
-        new_items[start_i][start_j] = guess;
-        let new_solution = &Sudoku { items: new_items };
+        new_items[start_i][start_j] = *guess;
+        let new_solution = Sudoku { items: new_items };
         if check_solution(&new_solution) {
-            let res = dfs(&new_solution);
+            let res = dfs(new_solution, randomize);
             if res.is_some() {
                 return Some(res.unwrap());
             }
@@ -151,15 +166,16 @@ fn parse_user_input(input: String) -> Option<[[u32; 9]; 9]> {
 }
 
 fn main() {
-    let mut lines = io::stdin().lock().lines();
-    let mut user_input = String::new();
+    let options = Options::from_args();
 
-    while let Some(line) = lines.next() {
-        let last_input = line.unwrap();
-        if user_input.len() > 0 {
+    let mut user_input = String::new();
+    let reader = Box::new(io::BufReader::new(io::stdin()));
+
+    for line in reader.lines() {
+        if let Ok(line) = line {
+            user_input.push_str(&line);
             user_input.push_str("\n");
         }
-        user_input.push_str(&last_input);
     }
 
     let sudoku_items = match parse_user_input(user_input) {
@@ -188,7 +204,8 @@ fn main() {
         items: sudoku_items
     };
 
-    let result = dfs(&sudoku);
+    println!("Using random: {}", options.randomize);
+    let result = dfs(sudoku, options.randomize);
 
     match result {
         Some(x) => println!("{}", x),
