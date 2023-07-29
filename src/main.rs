@@ -190,7 +190,7 @@ fn parse_user_input(input: String) -> Option<[[u32; 9]; 9]> {
     let mut matrix = [[0u32; 9]; 9];
     if asd.len() == 9*9 {
         for (i, item) in asd.iter().enumerate() {
-            matrix[i % 9][i / 9] = *item;
+            matrix[i / 9][i % 9] = *item;
         }
     }
     else {
