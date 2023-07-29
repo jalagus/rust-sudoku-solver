@@ -12,14 +12,28 @@ struct Sudoku {
 struct Options {
     #[structopt(short = "r", long = "randomize")]
     /// Randomize the tree traversal order such that in case of multiple solutions returns a random one
-    randomize: bool
+    randomize: bool,
+
+    #[structopt(short = "c", long = "count")]
+    /// Count the possible solutions
+    count: bool
+
 }
 
 impl std::fmt::Display for Sudoku {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut out = String::new();
-        for row in self.items {
-            out.push_str(&format!("{:?}\n", row));
+        for (i, row) in self.items.iter().enumerate() {
+            for i in 0..9 {
+                out.push_str(format!(" {}", row[i]).as_str());
+                if (i + 1) % 3 == 0 && i < 8 {
+                    out.push_str(" |");
+                }
+            }
+            out.push_str("\n");
+            if (i + 1) % 3 == 0 && i < 8 {
+                out.push_str("-----------------------\n");
+            }
         }
         write!(f, "{}", out)
     }
@@ -141,6 +155,26 @@ fn dfs(sudoku: Sudoku, randomize: bool) -> Option<Sudoku> {
     None
 }
 
+fn find_all_dfs(sudoku: Sudoku) -> u32 {
+    let (start_i, start_j) = match find_empty_position(&sudoku) {
+        Some(x) => x,
+        None => return 1
+    };
+
+    let mut n_solution = 0;
+
+    for guess in 1..10 {
+        let mut new_items = sudoku.items.clone();
+        new_items[start_i][start_j] = guess;
+        let new_solution = Sudoku { items: new_items };
+        if check_solution(&new_solution) {
+            n_solution += find_all_dfs(new_solution);
+        }
+    }
+
+    n_solution
+}
+
 fn parse_user_input(input: String) -> Option<[[u32; 9]; 9]> {
     let mut all_vals = vec![];
     for row in input.split("\n") {
@@ -204,12 +238,17 @@ fn main() {
         items: sudoku_items
     };
 
-    println!("Using random: {}", options.randomize);
-    let result = dfs(sudoku, options.randomize);
+    println!("Initial sudoku:\n{}", sudoku);
 
-    match result {
-        Some(x) => println!("{}", x),
-        None => println!("No solution")
+    if options.count {
+        println!("Counting all possible solutions.");
+        println!("Number of solutions: {}", find_all_dfs(sudoku));
     }
-
+    else {
+        let result = dfs(sudoku, options.randomize);
+        match result {
+            Some(x) => println!("Solution:\n{}", x),
+            None => println!("No solution")
+        }
+    }
 }
