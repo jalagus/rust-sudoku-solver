@@ -1,6 +1,8 @@
 use std::io::{self, BufRead};
 use structopt::StructOpt;
 
+use crate::sudoku::Solvable;
+
 mod sudoku;
 
 #[derive(StructOpt)]
@@ -82,10 +84,13 @@ fn main() {
 
     if options.count {
         println!("Counting all possible solutions.");
-        println!("Number of solutions: {}", sudoku::find_all_dfs(sudoku));
+        println!("Number of solutions: {}", sudoku.count_solutions());
     }
     else {
-        let result = sudoku::dfs(sudoku, options.randomize);
+        let result = match options.randomize {
+            true => sudoku.random_solution(),
+            false => sudoku.solve()
+        };
         match result {
             Some(x) => println!("Solution:\n{}", x),
             None => println!("No solution")

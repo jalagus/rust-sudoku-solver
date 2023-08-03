@@ -1,8 +1,26 @@
 use rand::seq::SliceRandom;
 use std::collections::HashSet;
 
+pub trait Solvable {
+    fn solve(&self) -> Option<Self> where Self: Sized;
+    fn random_solution(&self) -> Option<Self> where Self: Sized;
+    fn count_solutions(&self) -> u32;
+}
+
 pub struct Sudoku9x9 {
     pub items: [[u32; 9]; 9]
+}
+
+impl Solvable for Sudoku9x9 {
+    fn solve(&self) -> Option<Self> where Self: Sized {
+        dfs(self, false)
+    }
+    fn random_solution(&self) -> Option<Self> where Self: Sized {
+        dfs(self, true)
+    }
+    fn count_solutions(&self) -> u32 {
+        find_all_dfs(self)
+    }
 }
 
 impl std::fmt::Display for Sudoku9x9 {
@@ -113,7 +131,7 @@ fn find_empty_position(sudoku: &Sudoku9x9) -> Option<(usize, usize)> {
     return None
 }
 
-pub fn dfs(sudoku: Sudoku9x9, randomize: bool) -> Option<Sudoku9x9> {
+fn dfs(sudoku: &Sudoku9x9, randomize: bool) -> Option<Sudoku9x9> {
     let (start_i, start_j) = match find_empty_position(&sudoku) {
         Some(x) => x,
         None => return Some(Sudoku9x9 { items: sudoku.items.clone() })
@@ -130,7 +148,7 @@ pub fn dfs(sudoku: Sudoku9x9, randomize: bool) -> Option<Sudoku9x9> {
         new_items[start_i][start_j] = *guess;
         let new_solution = Sudoku9x9 { items: new_items };
         if check_solution(&new_solution) {
-            let res = dfs(new_solution, randomize);
+            let res = dfs(&new_solution, randomize);
             if res.is_some() {
                 return Some(res.unwrap());
             }
@@ -140,7 +158,7 @@ pub fn dfs(sudoku: Sudoku9x9, randomize: bool) -> Option<Sudoku9x9> {
     None
 }
 
-pub fn find_all_dfs(sudoku: Sudoku9x9) -> u32 {
+pub fn find_all_dfs(sudoku: &Sudoku9x9) -> u32 {
     let (start_i, start_j) = match find_empty_position(&sudoku) {
         Some(x) => x,
         None => return 1
@@ -153,7 +171,7 @@ pub fn find_all_dfs(sudoku: Sudoku9x9) -> u32 {
         new_items[start_i][start_j] = guess;
         let new_solution = Sudoku9x9 { items: new_items };
         if check_solution(&new_solution) {
-            n_solution += find_all_dfs(new_solution);
+            n_solution += find_all_dfs(&new_solution);
         }
     }
 
